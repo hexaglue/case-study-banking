@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.10</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.acme</groupId>
+    <artifactId>banking</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Acme Banking - Multi-Module Case Study</name>
+    <description>
+        Enterprise banking application used as a case study for
+        progressive migration to Hexagonal Architecture with HexaGlue.
+        Multi-module Maven project structured by technical layers (anti-pattern).
+    </description>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+        <mapstruct.version>1.6.3</mapstruct.version>
+    </properties>
+
+    <modules>
+        <module>banking-core</module>
+        <module>banking-persistence</module>
+        <module>banking-service</module>
+        <module>banking-api</module>
+        <module>banking-app</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.hexaglue</groupId>
+                <artifactId>hexaglue-maven-plugin</artifactId>
+                <version>6.1.0-SNAPSHOT</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <basePackage>com.acme.banking</basePackage>
+                    <failOnError>false</failOnError>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>io.hexaglue.plugins</groupId>
+                        <artifactId>hexaglue-plugin-audit</artifactId>
+                        <version>3.1.0-SNAPSHOT</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>io.hexaglue.plugins</groupId>
+                        <artifactId>hexaglue-plugin-jpa</artifactId>
+                        <version>3.1.0-SNAPSHOT</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>io.hexaglue.plugins</groupId>
+                        <artifactId>hexaglue-plugin-rest</artifactId>
+                        <version>3.1.0-SNAPSHOT</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>io.hexaglue.plugins</groupId>
+                        <artifactId>hexaglue-plugin-living-doc</artifactId>
+                        <version>3.1.0-SNAPSHOT</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+</project>

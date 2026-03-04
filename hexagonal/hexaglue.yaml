@@ -1,0 +1,40 @@
+# Step 6: Functional - JPA + REST + living-doc + audit
+classification:
+  exclude:
+    - "com.acme.banking.core.exception.*"
+
+plugins:
+  io.hexaglue.plugin.jpa:
+    entitySuffix: "JpaEntity"
+    repositorySuffix: "JpaRepository"
+    adapterSuffix: "RepositoryAdapter"
+    generateRepositories: true
+    generateAdapters: true
+    generateEmbeddables: true
+    enableAuditing: false
+    targetModule: banking-persistence
+    outputDirectory: "src/main/java"
+
+  io.hexaglue.plugin.rest:
+    targetModule: banking-api
+    flattenValueObjects: true
+    generateExceptionHandler: true
+    generateConfiguration: false
+
+  io.hexaglue.plugin.livingdoc:
+    outputDir: "living-doc"
+
+  io.hexaglue.plugin.audit:
+    generateDocs: false
+
+modules:
+  banking-core:
+    role: DOMAIN
+  banking-persistence:
+    role: INFRASTRUCTURE
+  banking-service:
+    role: APPLICATION
+  banking-api:
+    role: API
+  banking-app:
+    role: ASSEMBLY
