@@ -1,128 +1,188 @@
-# Acme Banking - Étude de cas HexaGlue
+# Acme Banking - Hexagonal Application
 
-Application bancaire Spring Boot multi-modules utilisée comme étude de cas
-pour la migration progressive vers une architecture hexagonale avec
-[HexaGlue](https://hexaglue.io).
+Banking application migrated to Hexagonal Architecture with
+[HexaGlue](https://hexaglue.io). Infrastructure code (JPA entities, REST
+controllers, DTOs) is generated automatically by HexaGlue plugins.
 
-## Contexte
+## Prerequisites
 
-Ce projet illustre un scénario courant en entreprise : une application Java
-découpée en **modules Maven par couches techniques** (core, persistence, service, api)
-plutôt que par limites de domaine métier.
+- **Java 21** (`brew install openjdk@21`)
+- **Maven 3.9+**
 
-Le domaine bancaire (comptes, transactions, virements, cartes) est riche en
-value objects et domain events, ce qui en fait un excellent candidat pour
-démontrer les bénéfices d'une architecture hexagonale.
-
-### Différences avec l'étude de cas E-Commerce
-
-| | E-Commerce | Banking |
-|---|---|---|
-| Structure | Mono-module | Multi-modules Maven |
-| Java | 17 | 21 |
-| Spring Boot | 3.2.5 | 3.5.10 |
-| Domaine | Commandes, produits, paiements | Comptes, virements, cartes |
-| Anti-pattern spécifique | Package plat | Découpage par couches techniques |
-
-## Prérequis
-
-- **Java 21** (installé localement, par exemple via Homebrew : `brew install openjdk@21`)
-
-## Démarrage rapide
-
-Si Java 21 n'est pas votre JDK par défaut, exportez `JAVA_HOME` avant chaque commande
-(ou ajoutez l'export dans votre `.bashrc` / `.zshrc`) :
+If Java 21 is not your default JDK:
 
 ```bash
 export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
 ```
 
+## Build and Run
+
 ```bash
-# Compiler et installer les modules dans le dépôt Maven local
-./mvnw clean install
+# Build, run HexaGlue audit, and install all modules
+mvn clean install
 
-# Lancer l'application
-./mvnw spring-boot:run -pl banking-app
-
-# Accéder à la console H2
-# http://localhost:8080/h2-console
-# JDBC URL : jdbc:h2:mem:bankingdb
+# Start the application
+java -jar banking-app/target/banking-app-0.1.0-SNAPSHOT.jar
 ```
 
-> **Note :** `clean install` est nécessaire avant `spring-boot:run` car le projet
-> est multi-modules. Chaque module doit être installé dans le dépôt Maven local
-> pour que `banking-app` puisse résoudre ses dépendances.
+The application starts on [http://localhost:8080](http://localhost:8080).
 
-## Structure du projet
+### Available endpoints
+
+- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **H2 Console**: [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
+  (JDBC URL: `jdbc:h2:mem:bankingdb`, user: `sa`, no password)
+
+> **Note:** `mvn spring-boot:run -pl banking-app` does not work reliably because it
+> re-triggers HexaGlue's `generate` goal in single-module mode, which interferes with
+> classpath resolution. Use `java -jar` with the fat JAR instead.
+
+## End-to-End Testing
+
+Once the application is running, the easiest way to explore the API is through
+Swagger UI at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html).
+
+You can also test with `curl`:
+
+```bash
+# Create a customer
+curl -s -X POST http://localhost:8080/api/customers \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"John","lastName":"Doe","email":"john@example.com","phone":"0612345678","street":"1 rue Test","city":"Paris","zipCode":"75001","country":"France"}'
+
+# Open an account
+curl -s -X POST http://localhost:8080/api/accounts \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":1,"accountNumber":"FR7630001007941234567890185","type":"CHECKING","initialDeposit":1000.00,"currency":"EUR"}'
+
+# Get account by ID
+curl -s http://localhost:8080/api/accounts/1
+
+# Deposit money
+curl -s -X POST http://localhost:8080/api/accounts/1/deposit \
+  -H "Content-Type: application/json" \
+  -d '{"amount":500.00,"currency":"EUR"}'
+
+# Withdraw money
+curl -s -X POST http://localhost:8080/api/accounts/1/withdraw \
+  -H "Content-Type: application/json" \
+  -d '{"amount":200.00,"currency":"EUR"}'
+
+# Get balance
+curl -s http://localhost:8080/api/accounts/get-balance/1
+
+# Create a second customer + account for transfers
+curl -s -X POST http://localhost:8080/api/customers \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"Jane","lastName":"Smith","email":"jane@example.com","phone":"0698765432","street":"2 rue Test","city":"Lyon","zipCode":"69001","country":"France"}'
+
+curl -s -X POST http://localhost:8080/api/accounts \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":2,"accountNumber":"FR7630001007949876543210904","type":"CHECKING","initialDeposit":500.00,"currency":"EUR"}'
+
+# Initiate a transfer
+curl -s -X POST http://localhost:8080/api/transfers \
+  -H "Content-Type: application/json" \
+  -d '{"sourceAccountId":1,"destinationAccountId":2,"amount":100.00,"currency":"EUR","description":"Test transfer"}'
+
+# Execute the transfer
+curl -s -X POST http://localhost:8080/api/transfers/1/execute-transfer
+
+# Get transfer details
+curl -s http://localhost:8080/api/transfers/1
+
+# Get transfers for an account
+curl -s http://localhost:8080/api/transfers/by-account/1
+
+# Issue a card
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"accountId":1,"cardNumber":"4111111111111111","expiryDate":"2028-12-31","cvv":"123","amount":1000.00,"currency":"USD"}' \
+  http://localhost:8080/api/cards
+
+# Get cards for an account
+curl -s http://localhost:8080/api/cards/by-account/1
+
+# Activate a card
+curl -s -X POST http://localhost:8080/api/cards/1/activate-card
+
+# Block a card
+curl -s -X POST http://localhost:8080/api/cards/1/block-card
+
+# Get transaction history
+curl -s "http://localhost:8080/api/transactions/get-history?accountId=1"
+```
+
+## Project Structure
 
 ```
-case-study-banking/
-├── banking-core/          Modèle partagé, exceptions, utilitaires
-├── banking-persistence/   Repositories JPA, configuration
-├── banking-service/       Logique métier (@Service)
-├── banking-api/           Controllers REST, DTOs
-└── banking-app/           Assembly Spring Boot
+hexagonal/
+├── banking-core/          Pure domain model (zero framework dependencies)
+│   ├── model/             Aggregates, entities, value objects, identifiers
+│   ├── port/in/           Driving ports (use cases)
+│   └── port/out/          Driven ports (repositories, gateways)
+├── banking-persistence/   JPA infrastructure (generated by HexaGlue)
+├── banking-service/       Application services + adapters
+├── banking-api/           REST controllers, DTOs (generated by HexaGlue)
+├── banking-app/           Spring Boot assembly
+└── hexaglue.yaml          HexaGlue plugin configuration
 ```
 
-### Dépendances entre modules
+### Module Roles
 
-```
-banking-app → banking-api → banking-service → banking-persistence → banking-core
-                                             ↗
-                             banking-service
-```
+| Module | Role | Content |
+|--------|------|---------|
+| `banking-core` | DOMAIN | Pure domain model, ports, zero external dependencies |
+| `banking-persistence` | INFRASTRUCTURE | JPA entities, repositories, mappers (generated) |
+| `banking-service` | APPLICATION | Application services, driven port adapters |
+| `banking-api` | API | REST controllers, DTOs, exception handler (generated) |
+| `banking-app` | ASSEMBLY | Spring Boot main class, configuration |
 
-## Branches Git
+### HexaGlue Plugins
 
-Chaque branche représente une étape de la migration progressive :
+| Plugin | Target Module | Generated |
+|--------|---------------|-----------|
+| JPA | `banking-persistence` | Entities, repositories, MapStruct mappers, adapters |
+| REST | `banking-api` | Controllers, request/response DTOs, exception handler |
+| Living Doc | (root) | Architecture documentation in Markdown |
+| Audit | (root) | Architecture compliance report |
 
-| Branche | Description |
-|---------|-------------|
-| `step/0-legacy` | Application legacy avec tous les anti-patterns |
-| `step/1-discovery` | Premier audit HexaGlue, score initial |
-| `step/2-configured` | Configuration des exclusions, amélioration du score |
-| `step/3-hexagonal` | Restructuration des packages en architecture hexagonale |
-| `step/4-pure-domain` | Purification du domaine (value objects, domain events, logique métier) |
-| `step/5-generated` | Génération du code infrastructure par les plugins HexaGlue |
-| `main` | Application fonctionnelle finale |
+## REST API
 
-Voir [MIGRATION.md](MIGRATION.md) pour le détail de chaque étape.
+The API is auto-generated from the driving ports defined in `banking-core`.
+Full documentation is available at [Swagger UI](http://localhost:8080/swagger-ui.html).
 
-## Domaine métier
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/accounts` | Open an account |
+| `GET` | `/api/accounts/{id}` | Get account details |
+| `GET` | `/api/accounts/by-number/{accountNumber}` | Get account by number |
+| `GET` | `/api/accounts/by-customer/{customerId}` | Accounts for a customer |
+| `GET` | `/api/accounts/get-balance/{id}` | Get balance |
+| `POST` | `/api/accounts/{id}/deposit` | Deposit money |
+| `POST` | `/api/accounts/{id}/withdraw` | Withdraw money |
+| `DELETE` | `/api/accounts/{id}` | Close an account |
+| `POST` | `/api/customers` | Create a customer |
+| `GET` | `/api/customers/{id}` | Get customer details |
+| `GET` | `/api/customers/by-email/{email}` | Get customer by email |
+| `PUT` | `/api/customers/{id}` | Update a customer |
+| `POST` | `/api/transfers` | Initiate a transfer |
+| `GET` | `/api/transfers/{id}` | Get transfer details |
+| `GET` | `/api/transfers/by-account/{accountId}` | Transfers for an account |
+| `POST` | `/api/transfers/{id}/execute-transfer` | Execute a transfer |
+| `POST` | `/api/transfers/{id}/cancel-transfer` | Cancel a transfer |
+| `POST` | `/api/transactions/record-transaction` | Record a transaction |
+| `GET` | `/api/transactions/get-history?accountId=` | Transaction history |
+| `GET` | `/api/transactions/get-statement?accountId=&type=` | Account statement |
+| `POST` | `/api/cards` | Issue a card |
+| `GET` | `/api/cards/by-account/{accountId}` | Cards for an account |
+| `POST` | `/api/cards/{id}/activate-card` | Activate a card |
+| `POST` | `/api/cards/{id}/block-card` | Block a card |
 
-L'application gère les opérations bancaires courantes :
+## HexaGlue Audit
 
-- **Clients** : création, mise à jour, consultation
-- **Comptes** : ouverture, dépôt, retrait, clôture (types : courant, épargne, professionnel)
-- **Virements** : initiation, exécution, annulation avec vérification des soldes
-- **Cartes bancaires** : émission, blocage, activation
-- **Transactions** : historique, relevés par type
-- **Bénéficiaires** : gestion des destinataires de virements
+The `verify` phase runs the HexaGlue audit automatically. Results are available at:
+- `target/hexaglue/reports/audit/AUDIT-REPORT.md`
+- `target/hexaglue/reports/living-doc/` (architecture documentation)
 
-## Anti-patterns documentés
-
-Cette application legacy illustre volontairement 11 anti-patterns courants,
-notamment :
-
-1. **Modèle anémique** : les entités sont de simples conteneurs de données sans logique métier
-2. **Couplage JPA** : annotations `@Entity` et `@MappedSuperclass` sur les classes domaine
-3. **Absence de ports** : les services dépendent directement des repositories Spring Data
-4. **Primitives omniprésentes** : `String` pour IBAN, BIC, email, numéro de carte ; `BigDecimal` pour les montants
-5. **Découpage horizontal** : modules Maven organisés par couche technique au lieu du domaine
-
-La liste complète est disponible dans [MIGRATION.md](MIGRATION.md).
-
-## API REST
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/api/accounts` | Liste des comptes |
-| `POST` | `/api/accounts` | Ouvrir un compte |
-| `POST` | `/api/accounts/{id}/deposit` | Effectuer un dépôt |
-| `POST` | `/api/accounts/{id}/withdraw` | Effectuer un retrait |
-| `GET` | `/api/customers/{id}` | Consulter un client |
-| `POST` | `/api/customers` | Créer un client |
-| `POST` | `/api/transfers` | Initier un virement |
-| `POST` | `/api/transfers/{id}/execute` | Exécuter un virement |
-| `GET` | `/api/cards/account/{id}` | Cartes d'un compte |
-| `GET` | `/api/transactions/account/{id}` | Historique des transactions |
+See the [root README](../README.md) for a comparison with the legacy application
+and [MIGRATION.md](../MIGRATION.md) for the detailed step-by-step migration log.

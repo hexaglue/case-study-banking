@@ -27,3 +27,8 @@ INSERT INTO transactions (id, type, description, reference, account_id, created_
 VALUES (3, 'DEPOSIT', 'Salary deposit', 'SAL-001', 3, '2026-01-20 09:00:00', 1800.00, 'EUR');
 INSERT INTO transactions (id, type, description, reference, account_id, created_at, amount, currency)
 VALUES (4, 'DEPOSIT', 'Savings transfer', 'SAV-001', 2, '2026-01-10 11:00:00', 15000.00, 'EUR');
+
+-- Reset auto-increment sequences to avoid conflicts with explicitly inserted IDs
+ALTER TABLE customer ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE account ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE transactions ALTER COLUMN id RESTART WITH 100;

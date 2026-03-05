@@ -11,4 +11,3 @@ target/
 .factorypath
 .vscode/
 .DS_Store
-!.mvn/wrapper/maven-wrapper.jar

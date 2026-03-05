@@ -12,11 +12,13 @@ plugins:
     generateAdapters: true
     generateEmbeddables: true
     enableAuditing: false
+    idStrategy: IDENTITY
     targetModule: banking-persistence
     outputDirectory: "src/main/java"
 
   io.hexaglue.plugin.rest:
     targetModule: banking-api
+    outputDirectory: "src/main/java"
     flattenValueObjects: true
     generateExceptionHandler: true
     generateConfiguration: false
