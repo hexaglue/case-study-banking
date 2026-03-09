@@ -7,7 +7,7 @@ to Hexagonal Architecture with [HexaGlue](https://hexaglue.io).
 
 ```
 case-study-banking/
-├── legacy/       # Original monolithic application (technical layers)
+├── legacy/       # Original multi-module application (technical layers)
 └── hexagonal/    # Migrated application (hexagonal architecture + HexaGlue)
 ```
 

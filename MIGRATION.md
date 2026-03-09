@@ -5,14 +5,14 @@ This document describes the migration of a Spring Boot banking application from 
 **Technologies**: Spring Boot 3.5.10, Java 21, HexaGlue 6.1.0, MapStruct 1.6.3
 
 **Structure**: the repository contains two distinct codebases:
-- `legacy/`: original application (layered architecture, Spring Boot monolith)
-- `hexagonal/`: migrated application (hexagonal architecture, multi-module, generated code)
+- `legacy/`: original application (layered architecture, multi-module by technical layer)
+- `hexagonal/`: migrated application (hexagonal architecture, multi-module by architectural role, generated code)
 
 ---
 
 ## 1. Starting Point: Legacy Application
 
-The legacy application is a classic Spring Boot monolith with 5 Maven modules:
+The legacy application is a classic Spring Boot multi-module project with 5 Maven modules organized by technical layer:
 
 | Module | Role |
 |--------|------|
@@ -62,7 +62,7 @@ The domain module depends directly on JPA infrastructure: impossible to test or 
 
 ---
 
-## 2. Step 1: Hexagonal Restructuring
+## 2. Hexagonal Restructuring
 
 First step: introduce ports and reorganize packages to separate concerns.
 
@@ -112,7 +112,7 @@ First step: introduce ports and reorganize packages to separate concerns.
 
 ---
 
-## 3. Step 2: Domain Purification
+## 3. Domain Purification
 
 Goal: make `banking-core` completely independent of any infrastructure.
 
@@ -176,7 +176,7 @@ Only dependency: jMolecules for `@SecondaryPort` annotations (architectural mark
 
 ---
 
-## 4. Step 3: JPA Generation with HexaGlue
+## 4. JPA Generation with HexaGlue
 
 HexaGlue analyzes domain code at compile time and automatically generates the persistence layer.
 
@@ -222,7 +222,7 @@ Mappers use the `reconstitute()` convention to rebuild domain objects.
 
 ---
 
-## 5. Step 4: REST Generation with HexaGlue
+## 5. REST Generation with HexaGlue
 
 HexaGlue generates REST controllers and DTOs from driving ports.
 
@@ -262,7 +262,7 @@ Generated controllers automatically include:
 
 ---
 
-## 6. Step 5: Running Application
+## 6. Running Application
 
 ### Assembly in `banking-app`
 
